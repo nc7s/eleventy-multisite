@@ -1,0 +1,222 @@
+= eleventy-multisite
+
+An https://www.11ty.dev[Eleventy] plugin adding multi-site support.
+Written in TypeScript, compiled to CommonJS.
+
+NOTE: For simplicity, this plugin is called *multisite* below.
+
+Assume such directory layout:
+
+----
+sites/
+	blog/
+		index.html
+		posts/
+			hello-world.adoc
+			lorem-ipsum.adoc
+		about.pug
+	lab/
+		index.html
+		lab.js
+	photos/
+		index.pug
+		photo1.jpg
+		photo2.png
+		photo3.webp
+----
+
+and you want them as three different sites, namingly *blog*, *lab* and *photos*.
+
+You can go as-is, building them on all occurences,
+publishing corresponding directory for each site,
+AND handwriting every link.
+
+Or you can use *multisite*, which build only one (or some, or all) of them for you.
+
+----
+$ cd sites
+$ yarn add --dev eleventy-multisite
+# or
+$ npm install --save-dev eleventy-multisite
+----
+
+..eleventy.js
+[source,js]
+----
+const multisite = require('eleventy-multisite')
+
+module.exports = function(eleventyConfig) {
+	// your existing configurations
+	eleventyConfig.addPlugin('multisite', {
+		baseDir: 'sites/',
+		outDir: '_out/',
+		sites: '*',
+	})
+}
+----
+
+.package.json (optional)
+[source,json]
+----
+{
+	"scripts": {
+		"m11ty": "yarn run eleventy-multisite",
+		"m11ty": "npm exec eleventy-multisite"
+	}
+}
+----
+
+----
+# with the script alias above
+$ yarn m11ty                    # build all sites (directories) under `config.baseDir`
+# or
+$ npm run m11ty
+$ yarn m11ty onedown --watch    # watch and build `onedown` under `config.baseDir`
+$ yarn m11ty blog --serve       # watch and serve `${config.baseDir}/blog`
+----
+
+== Usage
+
+----
+$ yarn run eleventy-multisite
+$ yarn run eleventy-multisite site1 glob*
+# or
+$ npm run eleventy-multisite
+$ npm run eleventy-multisite site1 glob*
+----
+
+.Options
+- `-b`, `--basedir` base directory of sites, overrides `config.baseDir`,
+default `sites/`; respects `.gitignore` and ignores `--outdir`
+- `-o`, `--outdir` base directory of output, overrides `config.outDir`,
+default `_out/`
+- `-c`, `--config` configuration file path, default `.eleventy.js`
+- `-E`, `--exclude` exclude this glob pattern, can be specified multiple times
+- `-w`, `--watch` watch and rebuild as source files change
+- `-S`, `--serve` start a web server serving built site, automatically `--watch`
+- `-p`, `--port` serve at this port, default `8080` (Eleventy default)
+- `-n`, `--dryrun` don't write to disk; passed to Eleventy
+- `-P`, `--pathprefix` see https://www.11ty.dev/docs/config/#deploy-to-a-subdirectory-with-a-path-prefix[Eleventy doc];
+passed to Eleventy
+
+[NOTE]
+====
+Due to the multi-action nature of *multisite*,
+you can't `--serve` multiple sites with one command, otherwise stdout would be messed up,
+and it wouldn't be possible to figure out which port to serve which site.
+`--watch` is fine.
+
+The `--to` option is currently not supported.
+====
+
+Positional arguments (ones not starting with `--` or `-`) are interpreted as site name patterns,
+searched for under `--basedir` or `config.baseDir`.
+See https://npmjs.com/package/glob#glob-primer[the `glob` package] for pattern syntax.
+
+If no positional argument is given, patterns defined in configuration option
+`sites` (see below) will be used.
+
+Sites may have their own `.eleventy.js` configuration file, and also have their config file path
+defined in `config.sites[].configPath`.
+
+Configurations are applied in following order:
+
+1. Global configuration
+2. Site-specific configuration
+3. Command line arguments
+
+== Configuration
+
+This plugin is configured through the top-level configuration file usually named `.eleventy.js`.
+It reads the same `--config` option as Eleventy does, so you can use a different file name.
+
+[source,js]
+----
+// .eleventy.js
+
+module.exports = function(eleventyConfig) {
+	// your existing configuration
+
+	// exactly match three sites, with default config
+	let options = {
+		sites: ['blog', 'lab', 'photos'],
+	}
+
+	// match all sites starting with `site-`, and `blog` with site-specific config;
+	// write all output to `_build/` instead of `_out/`
+	options = {
+		outDir: '_build/',
+		sites: [
+			'site-*',
+			['blog', {
+				outDir: '_blog',
+				configPath: '.blog.eleventy.js',
+			}],
+		],
+	}
+
+	// use the default config: all visible directories under `sites/`, write to `_out/`
+	options = {}
+
+	eleventyConfig.addPlugin(require('eleventy-multisite'), options)
+}
+----
+
+=== `options?: MultisiteConfig`
+
+==== `baseDir?: string`
+
+Base search directory. Default is `sites/`.
+
+`config.outDir` will be excluded to prevent previous output being "rebuilt".
+
+If `.gitignore` is present, its rules are respected.
+
+==== `outDir?: string`
+
+Base output directory.
+Each site, unless individually specified, will be built in `${outDir}/${site}`.
+Default is `_out/`.
+
+==== `sites?: (string | [string, SiteConfig])[] | string | [string, SiteOptions]`
+
+May be an array of or a single _site spec_.
+
+Each _site spec_ may be a
+
+* glob pattern, or
+* tuple of glob pattern and site-specific config
+
+See https://npmjs.com/package/glob#glob-primer[the `glob` package] for glob pattern syntax.
+
+Each pattern is appended a `/`, to filter out only the directories.
+
+Default is `['*']`, meaning all visible directories under `config.baseDir`.
+
+=== `SiteConfig`
+
+==== `outDir?: string`
+
+Output directory of the site, relative to project root.
+
+==== `configPath?: string`
+
+Configuration file path of the site, relative to project root.
+
+==== `pathPrefix?: string`
+
+See https://www.11ty.dev/docs/config/#deploy-to-a-subdirectory-with-a-path-prefix[Eleventy doc].
+
+==== `templateFormats?: string[] | string`
+
+See https://www.11ty.dev/docs/config/#template-formats[Eleventy doc].
+
+==== `ignoreGlobal?: boolean`
+
+Ignore global configuration. Default is `false`.
+
+== License
+
+Copyright &copy; 2022 Blair Noctis.
+
+Licensed under the BSD 3-clause license; see `LICENSE.txt`.
