@@ -47,7 +47,7 @@ const multisite = require('eleventy-multisite')
 
 module.exports = function(eleventyConfig) {
 	// your existing configurations
-	eleventyConfig.addPlugin('multisite', {
+	eleventyConfig.addPlugin(multisite, {
 		baseDir: 'sites/',
 		outDir: '_out/',
 		sites: '*',
@@ -192,6 +192,10 @@ See https://npmjs.com/package/glob#glob-primer[the `glob` package] for glob patt
 Each pattern is appended a `/`, to filter out only the directories.
 
 Default is `['*']`, meaning all visible directories under `config.baseDir`.
+
+==== `excludes?: string[] | string`
+
+Exclude these glob patterns, relative to `config.baseDir`.
 
 === `SiteConfig`
 
