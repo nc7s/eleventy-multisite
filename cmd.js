@@ -97,7 +97,8 @@ for (let site of sites) {
     const runOptions = {
         sourceDir: (0, path_1.join)(config.baseDir, site),
         outDir: (0, path_1.join)(config.outDir, site),
-        configPath: siteConfig.configPath ? siteConfig.configPath : args.config,
+        configPath: siteConfig.configPath,
+        globalConfigPath: args.config,
         pathPrefix: siteConfig.pathPrefix || config.pathPrefix,
         templateFormats: siteConfig.templateFormats || config.templateFormats,
         port: args.port,

@@ -51,7 +51,7 @@ export const DEFAULT_CONFIG: Config = {
 export interface RunOptions {
 	sourceDir: string,
 	outDir: string,
-	configPath: string,
+	configPath?: string,
 	pathPrefix?: string,
 	templateFormats?: string[],
 	port?: number,
@@ -132,13 +132,23 @@ export function runEleventy(options: RunOptions) {
 		quietMode: options.quite,
 		configPath: options.ignoreGlobal ? options.configPath : options.globalConfigPath,
 	})
+	if(!options.ignoreGlobal && options.configPath === undefined) {
+		const defaultPath = join(options.sourceDir, '.eleventy.js')
+		if(existsSync(defaultPath)) {
+			options.configPath = defaultPath
+		}
+	}
+	if(!options.ignoreGlobal && options.configPath !== undefined) {
+		const siteConfigure = require(join(process.cwd(), options.configPath))
+		siteConfigure(eleventy.eleventyConfig.userConfig)
+		// WARNING: Using internal API.
+		eleventy.eleventyConfig.hasConfigMerged = false
+		eleventy.eleventyConfig.getConfig()
+	}
 	eleventy.setPathPrefix(options.pathPrefix)
 	eleventy.setDryRun(options.dryRun)
 	eleventy.setIncrementalBuild(options.incremental)
 	eleventy.setFormats(options.templateFormats)
-	if(!options.ignoreGlobal && options.configPath !== undefined) {
-		require(options.configPath)(eleventy.eleventyConfig)
-	}
 	eleventy
 		.init()
 		.then(() => {

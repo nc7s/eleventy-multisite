@@ -85,13 +85,23 @@ function runEleventy(options) {
         quietMode: options.quite,
         configPath: options.ignoreGlobal ? options.configPath : options.globalConfigPath,
     });
+    if (!options.ignoreGlobal && options.configPath === undefined) {
+        const defaultPath = (0, path_1.join)(options.sourceDir, '.eleventy.js');
+        if ((0, fs_1.existsSync)(defaultPath)) {
+            options.configPath = defaultPath;
+        }
+    }
+    if (!options.ignoreGlobal && options.configPath !== undefined) {
+        const siteConfigure = require((0, path_1.join)(process.cwd(), options.configPath));
+        siteConfigure(eleventy.eleventyConfig.userConfig);
+        // WARNING: Using internal API.
+        eleventy.eleventyConfig.hasConfigMerged = false;
+        eleventy.eleventyConfig.getConfig();
+    }
     eleventy.setPathPrefix(options.pathPrefix);
     eleventy.setDryRun(options.dryRun);
     eleventy.setIncrementalBuild(options.incremental);
     eleventy.setFormats(options.templateFormats);
-    if (!options.ignoreGlobal && options.configPath !== undefined) {
-        require(options.configPath)(eleventy.eleventyConfig);
-    }
     eleventy
         .init()
         .then(() => {
