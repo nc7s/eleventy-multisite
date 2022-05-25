@@ -1,5 +1,7 @@
 = eleventy-multisite
 
+image:https://img.shields.io/npm/v/eleventy-multisite?style=flat-square[npm]
+
 An https://www.11ty.dev[Eleventy] plugin adding multi-site support.
 Written in TypeScript, compiled to CommonJS.
 
