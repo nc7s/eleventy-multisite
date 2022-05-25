@@ -3,6 +3,7 @@ import { sync as globSync } from 'glob'
 import minimatch from 'minimatch'
 import ignore from 'ignore'
 import { existsSync, readFileSync } from 'fs'
+import debug from 'debug'
 const Eleventy = require('@11ty/eleventy')
 const ConsoleLogger = require('@11ty/eleventy/src/Util/ConsoleLogger')
 
@@ -78,6 +79,8 @@ export const logger = new Proxy(new ConsoleLogger, {
 	}
 })
 
+export const dbg = debug('eleventy-multisite')
+
 /** Find sites in `baseDir` with given `patterns`.
   *
   * @param {Config} config - Global config.
@@ -104,6 +107,7 @@ export function findSites(config: Config, patterns: string[] | string): string[]
 		// error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'readonly string[] & string'.
 		//   Type 'string[]' is not assignable to type 'string'.
 		// ```
+		//
 		// which is weird, because parameter `ignore` has the type `string | ReadonlyArray<string> | undefined`,
 		// which is definitely not `readonly string[] & string`, which looks impossible to get.
 		// TODO: get rid of this error
@@ -118,6 +122,7 @@ export function findSites(config: Config, patterns: string[] | string): string[]
 			results.push(relative(config.baseDir, base))
 		}
 	}
+	dbg('findSites baseDir %s patterns %o results %o', config.baseDir, patterns, results)
 	return results
 }
 
@@ -127,7 +132,8 @@ export function findSites(config: Config, patterns: string[] | string): string[]
   *
   * @param {RunOptions} options
   */
-export function runEleventy(options: RunOptions) {
+export async function runEleventy(options: RunOptions) {
+	dbg('runEleventy site `%s` run options %o', options.sourceDir, options)
 	const eleventy = new Eleventy(options.sourceDir, options.outDir, {
 		quietMode: options.quite,
 		configPath: options.ignoreGlobal ? options.configPath : options.globalConfigPath,
@@ -139,6 +145,7 @@ export function runEleventy(options: RunOptions) {
 		}
 	}
 	if(!options.ignoreGlobal && options.configPath !== undefined) {
+		dbg('site `%s` apply site config %s', options.sourceDir, options.configPath)
 		const siteConfigure = require(join(process.cwd(), options.configPath))
 		siteConfigure(eleventy.eleventyConfig.userConfig)
 		// WARNING: Using internal API.
@@ -149,29 +156,21 @@ export function runEleventy(options: RunOptions) {
 	eleventy.setDryRun(options.dryRun)
 	eleventy.setIncrementalBuild(options.incremental)
 	eleventy.setFormats(options.templateFormats)
-	eleventy
-		.init()
-		.then(() => {
-			let watched = true
-			try {
-				if(options.serve || options.watch) {
-					eleventy.watch()
-						.catch(() => watched = false)
-						.then(() => {
-							if(options.serve && watched) {
-								eleventy.serve(options.port)
-							} else {
-								logger.forceLog(`Started watching site ${options.sourceDir}`)
-							}
-						})
+	await eleventy.init()
+	if(options.watch || options.serve) {
+		eleventy.watch()
+			.catch((e: Error) => logger.warn(`runEleventy watch error: ${e}`))
+			.then(() => {
+				if(options.serve) {
+					eleventy.serve(options.port)
 				} else {
-					// TODO: support JSON / ndjson builds
-					eleventy.write()
+					logger.forceLog(`Started watching site ${options.sourceDir}`)
 				}
-			} catch(e) {
-				// TODO: handle error
-			}
-		})
+			})
+	} else {
+		// TODO: support JSON / ndjson builds
+		await eleventy.executeBuild()
+	}
 }
 
 /** Match a `SiteConfig` for a given site, going through glob patterns.

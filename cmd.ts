@@ -4,11 +4,12 @@ import minimist from 'minimist'
 import debug from 'debug'
 import {
 	findSites, runEleventy, matchSiteConfig,
-	Config, SiteConfig, RunOptions, DEFAULT_CONFIG
+	Config, SiteConfig, RunOptions, DEFAULT_CONFIG,
+	logger
 } from './lib'
 const Eleventy = require('@11ty/eleventy')
 
-const dbg = debug('eleventy-multisite')
+const dbg = debug('eleventy-multisite:cmd')
 
 const args = minimist(process.argv.slice(2), {
 	string: [
@@ -65,6 +66,10 @@ Arguments:
 
 const globs = args._
 
+if(globs.length === 0) {
+	dbg('no glob patterns specified, using config values')
+}
+
 const config: Config = Object.assign({}, DEFAULT_CONFIG, (new Eleventy(args.basedir, args.outdir, {
 		configPath: args.config,
 	})).eleventyConfig.userConfig.multisiteConfig || {}
@@ -93,33 +98,35 @@ const sites = findSites(config, globs.length == 0 ?
 dbg('collected sites %o', sites)
 
 if(args.serve && sites.length > 1) {
-	throw new Error(`Can't serve more than one site.`)
+	logger.error(`Can't serve more than one site.`)
+	process.exit(1)
 }
 
 if(sites.length == 0) {
-	console.log('No site is found.')
-	process.exit()
+	logger.warn('No site is found.')
+	process.exit(1)
 }
 
-for(let site of sites) {
-	dbg('running Eleventy for site %s', site)
-	const siteConfig: SiteConfig = matchSiteConfig(config, site) || {}
-	dbg('site %s config %o', site, siteConfig)
-	const runOptions: RunOptions = {
-		sourceDir: join(config.baseDir, site),
-		outDir: join(config.outDir, site),
-		configPath: siteConfig.configPath,
-		globalConfigPath: args.config,
-		pathPrefix: siteConfig.pathPrefix || config.pathPrefix,
-		templateFormats: siteConfig.templateFormats || config.templateFormats,
-		port: args.port,
-		serve: args.serve,
-		watch: args.watch,
-		dryRun: args.dryrun,
-		incremental: args.incremental,
-		quite: args.quite,
+// TODO: get rid of this async workaround
+(async () => {
+	for(let site of sites) {
+		logger.log(`running Eleventy for site ${site}`)
+		const siteConfig: SiteConfig = matchSiteConfig(config, site) || {}
+		dbg('site `%s` config %o', site, siteConfig)
+		const runOptions: RunOptions = {
+			sourceDir: join(config.baseDir, site),
+			outDir: join(config.outDir, site),
+			configPath: siteConfig.configPath,
+			globalConfigPath: args.config,
+			pathPrefix: siteConfig.pathPrefix || config.pathPrefix,
+			templateFormats: siteConfig.templateFormats || config.templateFormats,
+			port: args.port,
+			serve: args.serve,
+			watch: args.watch,
+			dryRun: args.dryrun,
+			incremental: args.incremental,
+			quite: args.quite,
+		}
+		await runEleventy(runOptions)
 	}
-	dbg('site %s runOptions %o', site, runOptions)
-	runEleventy(runOptions)
-}
-
+})()

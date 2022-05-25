@@ -1,5 +1,14 @@
 #!/usr/bin/env node
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -9,7 +18,7 @@ const minimist_1 = __importDefault(require("minimist"));
 const debug_1 = __importDefault(require("debug"));
 const lib_1 = require("./lib");
 const Eleventy = require('@11ty/eleventy');
-const dbg = (0, debug_1.default)('eleventy-multisite');
+const dbg = (0, debug_1.default)('eleventy-multisite:cmd');
 const args = (0, minimist_1.default)(process.argv.slice(2), {
     string: [
         'basedir', 'outdir', 'config', 'exclude', 'pathprefix',
@@ -63,6 +72,9 @@ Arguments:
     process.exit();
 }
 const globs = args._;
+if (globs.length === 0) {
+    dbg('no glob patterns specified, using config values');
+}
 const config = Object.assign({}, lib_1.DEFAULT_CONFIG, (new Eleventy(args.basedir, args.outdir, {
     configPath: args.config,
 })).eleventyConfig.userConfig.multisiteConfig || {});
@@ -84,30 +96,33 @@ const sites = (0, lib_1.findSites)(config, globs.length == 0 ?
     globs);
 dbg('collected sites %o', sites);
 if (args.serve && sites.length > 1) {
-    throw new Error(`Can't serve more than one site.`);
+    lib_1.logger.error(`Can't serve more than one site.`);
+    process.exit(1);
 }
 if (sites.length == 0) {
-    console.log('No site is found.');
-    process.exit();
+    lib_1.logger.warn('No site is found.');
+    process.exit(1);
 }
-for (let site of sites) {
-    dbg('running Eleventy for site %s', site);
-    const siteConfig = (0, lib_1.matchSiteConfig)(config, site) || {};
-    dbg('site %s config %o', site, siteConfig);
-    const runOptions = {
-        sourceDir: (0, path_1.join)(config.baseDir, site),
-        outDir: (0, path_1.join)(config.outDir, site),
-        configPath: siteConfig.configPath,
-        globalConfigPath: args.config,
-        pathPrefix: siteConfig.pathPrefix || config.pathPrefix,
-        templateFormats: siteConfig.templateFormats || config.templateFormats,
-        port: args.port,
-        serve: args.serve,
-        watch: args.watch,
-        dryRun: args.dryrun,
-        incremental: args.incremental,
-        quite: args.quite,
-    };
-    dbg('site %s runOptions %o', site, runOptions);
-    (0, lib_1.runEleventy)(runOptions);
-}
+// TODO: get rid of this async workaround
+(() => __awaiter(void 0, void 0, void 0, function* () {
+    for (let site of sites) {
+        lib_1.logger.log(`running Eleventy for site ${site}`);
+        const siteConfig = (0, lib_1.matchSiteConfig)(config, site) || {};
+        dbg('site `%s` config %o', site, siteConfig);
+        const runOptions = {
+            sourceDir: (0, path_1.join)(config.baseDir, site),
+            outDir: (0, path_1.join)(config.outDir, site),
+            configPath: siteConfig.configPath,
+            globalConfigPath: args.config,
+            pathPrefix: siteConfig.pathPrefix || config.pathPrefix,
+            templateFormats: siteConfig.templateFormats || config.templateFormats,
+            port: args.port,
+            serve: args.serve,
+            watch: args.watch,
+            dryRun: args.dryrun,
+            incremental: args.incremental,
+            quite: args.quite,
+        };
+        yield (0, lib_1.runEleventy)(runOptions);
+    }
+}))();
