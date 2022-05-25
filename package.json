@@ -1,8 +1,11 @@
 {
 	"name": "eleventy-multisite",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Eleventy plugin adding multi-site support",
-	"keywords": ["eleventy-plugin", "multisite"],
+	"keywords": [
+		"eleventy-plugin",
+		"multisite"
+	],
 	"main": "index.js",
 	"repository": "https://github.com/bnoctis/eleventy-multisite",
 	"author": "Blair Noctis <code@noctis.im>",
