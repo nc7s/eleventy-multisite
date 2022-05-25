@@ -184,10 +184,10 @@ export async function runEleventy(options: RunOptions) {
 		}
 		dbg('site `%s` passthrough copy %o', config.passthroughCopies)
 	}
-	// WARNING: Using internal API.
-	// Some options above needs a reload.
+	// Some options above needs a config reload.
+	// WARNING: (ab)using internal API
 	eleventy.eleventyConfig.hasConfigMerged = false
-	eleventy.eleventyConfig.getConfig()
+	eleventy.config = eleventy.eleventyConfig.getConfig()
 
 	eleventy.setPathPrefix(options.pathPrefix)
 	eleventy.setDryRun(options.dryRun)
