@@ -122,6 +122,8 @@ if (sites.length == 0) {
             dryRun: args.dryrun,
             incremental: args.incremental,
             quite: args.quite,
+            ignoreGlobal: siteConfig.ignoreGlobal,
+            passthroughCopy: siteConfig.passthroughCopy,
         };
         yield (0, lib_1.runEleventy)(runOptions);
     }

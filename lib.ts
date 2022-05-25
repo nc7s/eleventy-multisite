@@ -1,5 +1,5 @@
 import { join, relative } from 'path'
-import { sync as globSync } from 'glob'
+import { sync as globSync } from 'fast-glob'
 import minimatch from 'minimatch'
 import ignore from 'ignore'
 import { existsSync, readFileSync } from 'fs'
@@ -12,7 +12,9 @@ export interface SiteConfig {
 	configPath?: string,
 	pathPrefix?: string,
 	templateFormats?: string[],
+
 	ignoreGlobal?: boolean,
+	passthroughCopy?: string | string[] | { [key: string]: string },
 }
 
 export type SiteSpec = string | [string, SiteConfig]
@@ -24,7 +26,7 @@ export interface Config {
 	pathPrefix?: string,
 	templateFormats?: string[],
 
-	excludes?: string[] | string,
+	excludes: string[] | string,
 	includesDir?: string,
 	layoutsDir?: string,
 }
@@ -46,7 +48,9 @@ export const DEFAULT_CONFIG: Config = {
 	outDir: '_out/',
 	sites: ['*'],
 	includesDir: '_includes/',
-	layoutsDir: '_layouts/'
+	layoutsDir: '_layouts/',
+
+	excludes: [],
 }
 
 export interface RunOptions {
@@ -64,6 +68,7 @@ export interface RunOptions {
 
 	ignoreGlobal?: boolean,
 	globalConfigPath?: string,
+	passthroughCopy?: string | string[] | { [key: string]: string },
 }
 
 // An Eleventy/Util/ConsoleLogger, proxied to add `[multisite] ` before each message.
@@ -89,17 +94,18 @@ export const dbg = debug('eleventy-multisite')
   */
 export function findSites(config: Config, patterns: string[] | string): string[] {
 	const ignoreFilter = existsSync('.gitignore') ? (() => {
+		dbg('apply .gitignore rules as it exists')
 		const ig = ignore().add(readFileSync('.gitignore').toString())
 		return ig.filter.bind(ig)
 	})() : (x: string) => x
 	if(typeof patterns === 'string') {
 		patterns = [patterns]
 	}
-	let results = []
+	if(typeof config.excludes === 'string') {
+		config.excludes = [config.excludes]
+	}
+	let results: string[] = []
 	for(let pattern of patterns) {
-		if(!pattern.endsWith('/')) {
-			pattern += '/'
-		}
 		pattern = join(config.baseDir, pattern)
 		// For the following line tsc throws this error:
 		//
@@ -112,14 +118,21 @@ export function findSites(config: Config, patterns: string[] | string): string[]
 		// which is definitely not `readonly string[] & string`, which looks impossible to get.
 		// TODO: get rid of this error
 		// @ts-ignore
-		for(let base of ignoreFilter(globSync(pattern, { ignore: config.excludes }))) {
+		for(let base of ignoreFilter(globSync(pattern, {
+			onlyDirectories: true,
+			markDirectories: true, // needed by `ignore`
+			ignore: config.excludes
+		}))) {
 			// Filter out matches under `config.outDir`, `config.includesDir` or `config.layoutsDir`
 			if(!relative(config.outDir, base).startsWith('..') ||
 			config.includesDir && !relative(config.includesDir, base).startsWith('..') ||
 			config.layoutsDir && !relative(config.layoutsDir, base).startsWith('..')) {
 				continue
 			}
-			results.push(relative(config.baseDir, base))
+			const relativePath = relative(config.baseDir, base)
+			if(!results.includes(relativePath)) {
+				results.push(relative(config.baseDir, base))
+			}
 		}
 	}
 	dbg('findSites baseDir %s patterns %o results %o', config.baseDir, patterns, results)
@@ -133,11 +146,15 @@ export function findSites(config: Config, patterns: string[] | string): string[]
   * @param {RunOptions} options
   */
 export async function runEleventy(options: RunOptions) {
-	dbg('runEleventy site `%s` run options %o', options.sourceDir, options)
+	const site = options.sourceDir
+	dbg('runEleventy site `%s` run options %o', site, options)
 	const eleventy = new Eleventy(options.sourceDir, options.outDir, {
 		quietMode: options.quite,
 		configPath: options.ignoreGlobal ? options.configPath : options.globalConfigPath,
 	})
+	if(options.ignoreGlobal) {
+		dbg('site `%s` ignore global config', site)
+	}
 	if(!options.ignoreGlobal && options.configPath === undefined) {
 		const defaultPath = join(options.sourceDir, '.eleventy.js')
 		if(existsSync(defaultPath)) {
@@ -145,13 +162,33 @@ export async function runEleventy(options: RunOptions) {
 		}
 	}
 	if(!options.ignoreGlobal && options.configPath !== undefined) {
-		dbg('site `%s` apply site config %s', options.sourceDir, options.configPath)
+		dbg('site `%s` apply site config %s', site, options.configPath)
 		const siteConfigure = require(join(process.cwd(), options.configPath))
 		siteConfigure(eleventy.eleventyConfig.userConfig)
-		// WARNING: Using internal API.
-		eleventy.eleventyConfig.hasConfigMerged = false
-		eleventy.eleventyConfig.getConfig()
 	}
+	if(options.passthroughCopy !== undefined) {
+		const config = eleventy.eleventyConfig.userConfig
+		if(typeof options.passthroughCopy === 'string' ) {
+			options.passthroughCopy = [options.passthroughCopy]
+		}
+		if(options.passthroughCopy instanceof Array) {
+			for(let source of options.passthroughCopy) {
+				config.addPassthroughCopy(join(options.sourceDir, source))
+			}
+		} else {
+			for(let source of Object.keys(options.passthroughCopy)) {
+				options.passthroughCopy[join(options.sourceDir, source)] = options.passthroughCopy[source]
+				delete options.passthroughCopy[source]
+			}
+			config.addPassthroughCopy(options.passthroughCopy)
+		}
+		dbg('site `%s` passthrough copy %o', config.passthroughCopies)
+	}
+	// WARNING: Using internal API.
+	// Some options above needs a reload.
+	eleventy.eleventyConfig.hasConfigMerged = false
+	eleventy.eleventyConfig.getConfig()
+
 	eleventy.setPathPrefix(options.pathPrefix)
 	eleventy.setDryRun(options.dryRun)
 	eleventy.setIncrementalBuild(options.incremental)
@@ -164,7 +201,7 @@ export async function runEleventy(options: RunOptions) {
 				if(options.serve) {
 					eleventy.serve(options.port)
 				} else {
-					logger.forceLog(`Started watching site ${options.sourceDir}`)
+					logger.forceLog(`Started watching site ${site}`)
 				}
 			})
 	} else {

@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.matchSiteConfig = exports.runEleventy = exports.findSites = exports.dbg = exports.logger = exports.DEFAULT_CONFIG = void 0;
 const path_1 = require("path");
-const glob_1 = require("glob");
+const fast_glob_1 = require("fast-glob");
 const minimatch_1 = __importDefault(require("minimatch"));
 const ignore_1 = __importDefault(require("ignore"));
 const fs_1 = require("fs");
@@ -26,7 +26,8 @@ exports.DEFAULT_CONFIG = {
     outDir: '_out/',
     sites: ['*'],
     includesDir: '_includes/',
-    layoutsDir: '_layouts/'
+    layoutsDir: '_layouts/',
+    excludes: [],
 };
 // An Eleventy/Util/ConsoleLogger, proxied to add `[multisite] ` before each message.
 exports.logger = new Proxy(new ConsoleLogger, {
@@ -50,17 +51,18 @@ exports.dbg = (0, debug_1.default)('eleventy-multisite');
   */
 function findSites(config, patterns) {
     const ignoreFilter = (0, fs_1.existsSync)('.gitignore') ? (() => {
+        (0, exports.dbg)('apply .gitignore rules as it exists');
         const ig = (0, ignore_1.default)().add((0, fs_1.readFileSync)('.gitignore').toString());
         return ig.filter.bind(ig);
     })() : (x) => x;
     if (typeof patterns === 'string') {
         patterns = [patterns];
     }
+    if (typeof config.excludes === 'string') {
+        config.excludes = [config.excludes];
+    }
     let results = [];
     for (let pattern of patterns) {
-        if (!pattern.endsWith('/')) {
-            pattern += '/';
-        }
         pattern = (0, path_1.join)(config.baseDir, pattern);
         // For the following line tsc throws this error:
         //
@@ -73,14 +75,21 @@ function findSites(config, patterns) {
         // which is definitely not `readonly string[] & string`, which looks impossible to get.
         // TODO: get rid of this error
         // @ts-ignore
-        for (let base of ignoreFilter((0, glob_1.sync)(pattern, { ignore: config.excludes }))) {
+        for (let base of ignoreFilter((0, fast_glob_1.sync)(pattern, {
+            onlyDirectories: true,
+            markDirectories: true,
+            ignore: config.excludes
+        }))) {
             // Filter out matches under `config.outDir`, `config.includesDir` or `config.layoutsDir`
             if (!(0, path_1.relative)(config.outDir, base).startsWith('..') ||
                 config.includesDir && !(0, path_1.relative)(config.includesDir, base).startsWith('..') ||
                 config.layoutsDir && !(0, path_1.relative)(config.layoutsDir, base).startsWith('..')) {
                 continue;
             }
-            results.push((0, path_1.relative)(config.baseDir, base));
+            const relativePath = (0, path_1.relative)(config.baseDir, base);
+            if (!results.includes(relativePath)) {
+                results.push((0, path_1.relative)(config.baseDir, base));
+            }
         }
     }
     (0, exports.dbg)('findSites baseDir %s patterns %o results %o', config.baseDir, patterns, results);
@@ -95,11 +104,15 @@ exports.findSites = findSites;
   */
 function runEleventy(options) {
     return __awaiter(this, void 0, void 0, function* () {
-        (0, exports.dbg)('runEleventy site `%s` run options %o', options.sourceDir, options);
+        const site = options.sourceDir;
+        (0, exports.dbg)('runEleventy site `%s` run options %o', site, options);
         const eleventy = new Eleventy(options.sourceDir, options.outDir, {
             quietMode: options.quite,
             configPath: options.ignoreGlobal ? options.configPath : options.globalConfigPath,
         });
+        if (options.ignoreGlobal) {
+            (0, exports.dbg)('site `%s` ignore global config', site);
+        }
         if (!options.ignoreGlobal && options.configPath === undefined) {
             const defaultPath = (0, path_1.join)(options.sourceDir, '.eleventy.js');
             if ((0, fs_1.existsSync)(defaultPath)) {
@@ -107,13 +120,33 @@ function runEleventy(options) {
             }
         }
         if (!options.ignoreGlobal && options.configPath !== undefined) {
-            (0, exports.dbg)('site `%s` apply site config %s', options.sourceDir, options.configPath);
+            (0, exports.dbg)('site `%s` apply site config %s', site, options.configPath);
             const siteConfigure = require((0, path_1.join)(process.cwd(), options.configPath));
             siteConfigure(eleventy.eleventyConfig.userConfig);
-            // WARNING: Using internal API.
-            eleventy.eleventyConfig.hasConfigMerged = false;
-            eleventy.eleventyConfig.getConfig();
         }
+        if (options.passthroughCopy !== undefined) {
+            const config = eleventy.eleventyConfig.userConfig;
+            if (typeof options.passthroughCopy === 'string') {
+                options.passthroughCopy = [options.passthroughCopy];
+            }
+            if (options.passthroughCopy instanceof Array) {
+                for (let source of options.passthroughCopy) {
+                    config.addPassthroughCopy((0, path_1.join)(options.sourceDir, source));
+                }
+            }
+            else {
+                for (let source of Object.keys(options.passthroughCopy)) {
+                    options.passthroughCopy[(0, path_1.join)(options.sourceDir, source)] = options.passthroughCopy[source];
+                    delete options.passthroughCopy[source];
+                }
+                config.addPassthroughCopy(options.passthroughCopy);
+            }
+            (0, exports.dbg)('site `%s` passthrough copy %o', config.passthroughCopies);
+        }
+        // WARNING: Using internal API.
+        // Some options above needs a reload.
+        eleventy.eleventyConfig.hasConfigMerged = false;
+        eleventy.eleventyConfig.getConfig();
         eleventy.setPathPrefix(options.pathPrefix);
         eleventy.setDryRun(options.dryRun);
         eleventy.setIncrementalBuild(options.incremental);
@@ -127,7 +160,7 @@ function runEleventy(options) {
                     eleventy.serve(options.port);
                 }
                 else {
-                    exports.logger.forceLog(`Started watching site ${options.sourceDir}`);
+                    exports.logger.forceLog(`Started watching site ${site}`);
                 }
             });
         }

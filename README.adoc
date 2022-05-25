@@ -111,7 +111,7 @@ The `--to` option is currently not supported.
 
 Positional arguments (ones not starting with `--` or `-`) are interpreted as site name patterns,
 searched for under `--basedir` or `config.baseDir`.
-See https://npmjs.com/package/glob#glob-primer[the `glob` package] for pattern syntax.
+See https://www.npmjs.com/package/fast-glob#pattern-syntax[the `fast-glob` package] for pattern syntax.
 
 If no positional argument is given, patterns defined in configuration option
 `sites` (see below) will be used.
@@ -187,8 +187,6 @@ Each _site spec_ may be a
 * glob pattern, or
 * tuple of glob pattern and site-specific config
 
-See https://npmjs.com/package/glob#glob-primer[the `glob` package] for glob pattern syntax.
-
 Each pattern is appended a `/`, to filter out only the directories.
 
 Default is `['*']`, meaning all visible directories under `config.baseDir`.
@@ -218,6 +216,16 @@ See https://www.11ty.dev/docs/config/#template-formats[Eleventy doc].
 ==== `ignoreGlobal?: boolean`
 
 Ignore global configuration. Default is `false`.
+
+==== `passthroughCopy?: string | string[] | { [key: string]: string }`
+
+Site-local passthrough copy, relative to site directory.
+
+May be
+
+- a glob pattern
+- an array of glob patterns
+- a dictionary of `source glob: destination` pairs
 
 == License
 
