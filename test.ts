@@ -1,7 +1,9 @@
 import test from 'ava'
+import { rmSync } from 'fs'
 import { execSync } from 'child_process'
 
 test('it runs', t => {
-	execSync('yarn run eleventy-multisite')
+	execSync('npm exec eleventy-multisite -- -b fixtures')
+	rmSync('./_out', { recursive: true })
 	t.pass()
 })
