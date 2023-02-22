@@ -37,7 +37,7 @@ Or you can use *multisite*, which build only one (or some, or all) of them for y
 
 ----
 $ cd sites
-$ yarn add --dev eleventy-multisite
+$ pnpm add --dev eleventy-multisite
 # or
 $ npm install --save-dev eleventy-multisite
 ----
@@ -62,7 +62,7 @@ module.exports = function(eleventyConfig) {
 ----
 {
 	"scripts": {
-		"m11ty": "yarn run eleventy-multisite",
+		"m11ty": "pnpm exec eleventy-multisite",
 		"m11ty": "npm exec eleventy-multisite"
 	}
 }
@@ -70,18 +70,18 @@ module.exports = function(eleventyConfig) {
 
 ----
 # with the script alias above
-$ yarn m11ty                    # build all sites (directories) under `config.baseDir`
+$ pnpm m11ty                    # build all sites (directories) under `config.baseDir`
 # or
 $ npm run m11ty
-$ yarn m11ty onedown --watch    # watch and build `onedown` under `config.baseDir`
-$ yarn m11ty blog --serve       # watch and serve `${config.baseDir}/blog`
+$ pnpm m11ty onedown --watch    # watch and build `onedown` under `config.baseDir`
+$ pnpm m11ty blog --serve       # watch and serve `${config.baseDir}/blog`
 ----
 
 == Usage
 
 ----
-$ yarn run eleventy-multisite
-$ yarn run eleventy-multisite site1 glob*
+$ pnpm run eleventy-multisite
+$ pnpm run eleventy-multisite site1 glob*
 # or
 $ npm run eleventy-multisite
 $ npm run eleventy-multisite site1 glob*
@@ -234,3 +234,4 @@ May be
 Copyright &copy; 2022 Blair Noctis.
 
 Licensed under the BSD 3-clause license; see `LICENSE.txt`.
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-yarn run tsc
+npm exec tsc
 git add *.js
-yarn test
+npm test
