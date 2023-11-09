@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm exec tsc
+pnpm exec tsc
 git add *.js
-npm test
+pnpm test

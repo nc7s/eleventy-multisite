@@ -15,12 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.matchSiteConfig = exports.runEleventy = exports.findSites = exports.dbg = exports.logger = exports.DEFAULT_CONFIG = void 0;
 const path_1 = require("path");
 const fast_glob_1 = require("fast-glob");
-const minimatch_1 = __importDefault(require("minimatch"));
+const minimatch_1 = require("minimatch");
 const ignore_1 = __importDefault(require("ignore"));
 const fs_1 = require("fs");
 const debug_1 = __importDefault(require("debug"));
-const Eleventy = require('@11ty/eleventy');
-const ConsoleLogger = require('@11ty/eleventy/src/Util/ConsoleLogger');
+const eleventy_1 = __importDefault(require("@11ty/eleventy"));
+// @ts-ignore
+const ConsoleLogger_1 = __importDefault(require("@11ty/eleventy/src/Util/ConsoleLogger"));
 exports.DEFAULT_CONFIG = {
     baseDir: 'sites/',
     outDir: '_out/',
@@ -30,7 +31,7 @@ exports.DEFAULT_CONFIG = {
     excludes: [],
 };
 // An Eleventy/Util/ConsoleLogger, proxied to add `[multisite] ` before each message.
-exports.logger = new Proxy(new ConsoleLogger, {
+exports.logger = new Proxy(new ConsoleLogger_1.default, {
     get: function (target, prop) {
         if (['log', 'forceLog', 'warn', 'error'].includes(prop)) {
             return function (msg) {
@@ -106,7 +107,8 @@ function runEleventy(options) {
     return __awaiter(this, void 0, void 0, function* () {
         const site = options.sourceDir;
         (0, exports.dbg)('runEleventy site `%s` run options %o', site, options);
-        const eleventy = new Eleventy(options.sourceDir, options.outDir, {
+        // @ts-ignore
+        const eleventy = new eleventy_1.default(options.sourceDir, options.outDir, {
             quietMode: options.quite,
             configPath: options.ignoreGlobal ? options.configPath : options.globalConfigPath,
         });
@@ -181,7 +183,7 @@ exports.runEleventy = runEleventy;
 function matchSiteConfig(config, site) {
     for (let siteSpec of config.sites) {
         const glob = typeof siteSpec === 'string' ? siteSpec : siteSpec[0];
-        if ((0, minimatch_1.default)(site, glob)) {
+        if ((0, minimatch_1.minimatch)(site, glob)) {
             if (typeof siteSpec === 'string') {
                 // string sitespec uses default config
                 return;

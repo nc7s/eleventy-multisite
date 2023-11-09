@@ -1,11 +1,12 @@
 import { join, relative } from 'path'
 import { sync as globSync } from 'fast-glob'
-import minimatch from 'minimatch'
+import { minimatch } from 'minimatch'
 import ignore from 'ignore'
 import { existsSync, readFileSync } from 'fs'
 import debug from 'debug'
-const Eleventy = require('@11ty/eleventy')
-const ConsoleLogger = require('@11ty/eleventy/src/Util/ConsoleLogger')
+import Eleventy from '@11ty/eleventy'
+// @ts-ignore
+import ConsoleLogger from '@11ty/eleventy/src/Util/ConsoleLogger'
 
 export interface SiteConfig {
 	outDir?: string,
@@ -148,6 +149,7 @@ export function findSites(config: Config, patterns: string[] | string): string[]
 export async function runEleventy(options: RunOptions) {
 	const site = options.sourceDir
 	dbg('runEleventy site `%s` run options %o', site, options)
+	// @ts-ignore
 	const eleventy = new Eleventy(options.sourceDir, options.outDir, {
 		quietMode: options.quite,
 		configPath: options.ignoreGlobal ? options.configPath : options.globalConfigPath,

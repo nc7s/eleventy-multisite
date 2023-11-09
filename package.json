@@ -1,6 +1,6 @@
 {
 	"name": "eleventy-multisite",
-	"version": "0.0.5",
+	"version": "0.1.0",
 	"description": "Eleventy plugin adding multi-site support",
 	"keywords": [
 		"eleventy-plugin",
@@ -8,34 +8,31 @@
 	],
 	"main": "index.js",
 	"repository": "https://github.com/bnoctis/eleventy-multisite",
-	"author": "Blair Noctis <code@noctis.im>",
+	"author": "Blair Noctis <n@sail.ng>",
 	"license": "BSD-3-Clause",
 	"bin": "cmd.js",
 	"scripts": {
-		"build": "npm exec tsc",
-		"test": "npm run build && npm exec ava",
-		"prepare": "npm exec husky install",
+		"build": "pnpm exec tsc && chmod +x cmd.js",
+		"test": "pnpm build && pnpm exec ava",
+		"prepare": "pnpm exec husky install",
 		"clean": "rm *.js"
 	},
 	"dependencies": {
-		"@11ty/eleventy": "^1.0.2",
-		"@types/command-exists": "^1.2.0",
-		"command-exists": "^1.2.9",
+		"@11ty/eleventy": "^2.0.1",
 		"debug": "^4.3.4",
-		"fast-glob": "^3.2.12",
+		"fast-glob": "^3.3.2",
 		"ignore": "^5.2.4",
-		"minimatch": "^5.1.6",
+		"minimatch": "^9.0.3",
 		"minimist": "^1.2.8"
 	},
 	"devDependencies": {
 		"@ava/typescript": "^3.0.1",
-		"@types/debug": "^4.1.7",
-		"@types/glob": "^7.2.0",
-		"@types/minimatch": "^3.0.5",
-		"@types/minimist": "^1.2.2",
-		"@types/node": "^17.0.45",
-		"ava": "^4.3.3",
+		"@types/debug": "^4.1.12",
+		"@types/minimatch": "^5.1.2",
+		"@types/minimist": "^1.2.5",
+		"@types/node": "^20.9.0",
+		"ava": "^5.3.1",
 		"husky": "^8.0.3",
-		"typescript": "^4.9.5"
+		"typescript": "^5.2.2"
 	}
 }
