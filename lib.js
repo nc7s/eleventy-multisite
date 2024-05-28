@@ -78,7 +78,7 @@ function findSites(config, patterns) {
         // @ts-ignore
         for (let base of ignoreFilter((0, fast_glob_1.sync)(pattern, {
             onlyDirectories: true,
-            markDirectories: true,
+            markDirectories: true, // needed by `ignore`
             ignore: config.excludes
         }))) {
             // Filter out matches under `config.outDir`, `config.includesDir` or `config.layoutsDir`
