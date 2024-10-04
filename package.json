@@ -7,14 +7,13 @@
 		"multisite"
 	],
 	"main": "index.js",
-	"repository": "https://github.com/bnoctis/eleventy-multisite",
+	"repository": "https://github.com/nc7s/eleventy-multisite",
 	"author": "Blair Noctis <n@sail.ng>",
 	"license": "BSD-3-Clause",
 	"bin": "cmd.js",
 	"scripts": {
 		"build": "pnpm exec tsc && chmod +x cmd.js",
 		"test": "pnpm build && pnpm exec ava",
-		"prepare": "pnpm exec husky install",
 		"clean": "rm *.js"
 	},
 	"dependencies": {
@@ -32,7 +31,6 @@
 		"@types/minimist": "^1.2.5",
 		"@types/node": "^20.12.12",
 		"ava": "^6.1.3",
-		"husky": "^9.0.11",
 		"typescript": "^5.4.5"
 	}
 }

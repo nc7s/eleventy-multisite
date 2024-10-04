@@ -1,5 +1,15 @@
 = eleventy-multisite
 
+== Unmaintained
+
+The module systems of JavaScript are an incomprehensible mess, so are their
+resolution rules. I do like and want strong typing, but would rather not touch
+tsconfig for aforementioned reasons, so it's impossible for me to maintain a
+typed implementation. Feel free to take the code, I'm happy to transfer the
+package name to appropriate prospective maintainers.
+
+== Intro
+
 image:https://img.shields.io/npm/v/eleventy-multisite?style=flat-square[npm]
 
 An https://www.11ty.dev[Eleventy] plugin adding multi-site support.
